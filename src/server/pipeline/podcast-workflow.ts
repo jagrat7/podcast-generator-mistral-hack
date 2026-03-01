@@ -1,33 +1,45 @@
-import { db } from "~/server/db"
-import { podcasts, podcastCharacters, podcastSegments, characters, books } from "~/server/db/schema"
-import { eq } from "drizzle-orm"
-import { parseEpub } from "./epub-parser"
-import { generateScript } from "./script-generator"
-import { ensureVoiceForCharacter } from "./voice-cloner"
-import { generateSegmentAudio } from "./audio-generator"
-import { combineAudio } from "./audio-combiner"
-import type { Chapter } from "./types"
+import { db } from "~/server/db";
+import {
+  podcasts,
+  podcastCharacters,
+  podcastSegments,
+  characters,
+  books,
+} from "~/server/db/schema";
+import { eq } from "drizzle-orm";
+import { parseEpub } from "./epub-parser";
+import { generateScript } from "./script-generator";
+import { ensureVoiceForCharacter } from "./voice-cloner";
+import { generateSegmentAudio } from "./audio-generator";
+import { combineAudio } from "./audio-combiner";
+import type { Chapter, ScriptSegment } from "./types";
+
+function matchAllWords(dbName: string, speakerName: string): boolean {
+  const dbWords = dbName.toLowerCase().split(/\s+/)
+  const speakerWords = speakerName.toLowerCase().split(/\s+/)
+  return dbWords.every((w) => speakerWords.includes(w))
+}
 
 export async function podcastWorkflow(podcastId: number) {
   try {
     // Load podcast + characters from DB
-    const podcast = await db.query.podcasts.findFirst({ 
-      where: eq(podcasts.id, podcastId) 
-    })
-    
+    const podcast = await db.query.podcasts.findFirst({
+      where: eq(podcasts.id, podcastId),
+    });
+
     if (!podcast) {
-      throw new Error(`Podcast ${podcastId} not found`)
+      throw new Error(`Podcast ${podcastId} not found`);
     }
-    
-    const pcRows = await db.query.podcastCharacters.findMany({ 
-      where: eq(podcastCharacters.podcastId, podcastId) 
-    })
-    
+
+    const pcRows = await db.query.podcastCharacters.findMany({
+      where: eq(podcastCharacters.podcastId, podcastId),
+    });
+
     const charRows = await Promise.all(
       pcRows.map(async (pc) => {
         const char = await db.query.characters.findFirst({
           where: eq(characters.id, pc.characterId),
-        })
+        });
         return {
           id: char!.id,
           name: char!.name,
@@ -36,118 +48,147 @@ export async function podcastWorkflow(podcastId: number) {
           speakingQuirks: char!.speakingQuirks,
           role: pc.role,
           modifier: pc.modifier,
-        }
-      })
-    )
-    
+        };
+      }),
+    );
+
     // Load chapter text from stored chaptersJson
-    const book = await db.query.books.findFirst({ 
-      where: eq(books.id, podcast.bookId) 
-    })
-    
+    const book = await db.query.books.findFirst({
+      where: eq(books.id, podcast.bookId),
+    });
+
     if (!book) {
-      throw new Error(`Book ${podcast.bookId} not found`)
+      throw new Error(`Book ${podcast.bookId} not found`);
     }
-    
-    const chapters = JSON.parse(book.chaptersJson) as Chapter[]
-    const chapter = chapters.find(c => c.index === podcast.chapterIndex)
-    
+
+    const chapters = JSON.parse(book.chaptersJson) as Chapter[];
+    const chapter = chapters.find((c) => c.index === podcast.chapterIndex);
+
     if (!chapter) {
-      throw new Error(`Chapter ${podcast.chapterIndex} not found`)
+      throw new Error(`Chapter ${podcast.chapterIndex} not found`);
     }
-    
-    const documentText = chapter.text
-    
+
+    const documentText = chapter.text;
+
     // Step 1: Generate script with Mistral
-    await updateStatus(podcastId, "scripting", 15)
-    const script = await generateScript({ 
-      documentText, 
-      characters: charRows, 
-      format: podcast.format as any, 
-      title: podcast.title 
-    })
-    await db.update(podcasts)
+    await updateStatus(podcastId, "scripting", 15);
+    const script = await generateScript({
+      documentText,
+      characters: charRows,
+      format: podcast.format as any,
+      title: podcast.title,
+    });
+    await db
+      .update(podcasts)
       .set({ scriptJson: JSON.stringify(script) })
-      .where(eq(podcasts.id, podcastId))
-    
+      .where(eq(podcasts.id, podcastId));
+
     // Step 2: Clone voices for each character
-    await updateStatus(podcastId, "generating_voices", 25)
-    const voiceMap = new Map<string, string>()
+    await updateStatus(podcastId, "generating_voices", 25);
+    const voiceMap = new Map<string, string>();
     for (const c of charRows) {
-      const voiceId = await ensureVoiceForCharacter(c.id)
-      voiceMap.set(c.name, voiceId)
+      const voiceId = await ensureVoiceForCharacter(c.id);
+      voiceMap.set(c.name, voiceId);
     }
-    
+
+    // Build a lookup map: lowercase name -> character row
+    const charLookup = new Map<string, (typeof charRows)[0]>();
+    for (const c of charRows) {
+      charLookup.set(c.name.toLowerCase(), c);
+    }
+
     // Step 3: Generate audio per segment
-    await updateStatus(podcastId, "generating_audio", 30)
-    const segmentPaths: string[] = []
+    await updateStatus(podcastId, "generating_audio", 30);
+    const segmentPaths: string[] = [];
     for (let i = 0; i < script.segments.length; i++) {
-      const seg = script.segments[i]!
-      const character = charRows.find(c => c.name === seg.speakerName)
-      
+      const seg = script.segments[i] as ScriptSegment
+      const speakerLower = seg.speakerName.toLowerCase()
+      // Try exact match first, then fuzzy strategies
+      const character =
+        charLookup.get(speakerLower) ??
+        charRows.find((c) => c.name.toLowerCase().startsWith(speakerLower)) ??
+        charRows.find((c) => speakerLower.startsWith(c.name.toLowerCase())) ??
+        charRows.find((c) => c.name.toLowerCase().includes(speakerLower) || speakerLower.includes(c.name.toLowerCase())) ??
+        // Handle Mistral adding middle names: check if all words in DB name appear in speaker name
+        charRows.find((c) => matchAllWords(c.name, speakerLower))
+
       if (!character) {
-        console.error(`Character ${seg.speakerName} not found`)
-        continue
+        console.error(`Character ${seg.speakerName} not found`);
+        continue;
       }
-      
-      const [row] = await db.insert(podcastSegments).values({ 
-        podcastId, 
-        characterId: character.id, 
-        orderIndex: i, 
-        text: seg.text, 
-        emotion: seg.emotion ?? null, 
-        status: "generating" 
-      }).returning()
-      
-      const voiceId = voiceMap.get(seg.speakerName)!
-      const { filePath, durationMs } = await generateSegmentAudio({ 
-        voiceId, 
-        text: seg.text, 
-        segmentId: row!.id, 
-        podcastId 
-      })
-      
-      await db.update(podcastSegments)
+
+      const [row] = await db
+        .insert(podcastSegments)
+        .values({
+          podcastId,
+          characterId: character.id,
+          orderIndex: i,
+          text: seg.text,
+          emotion: seg.emotion ?? null,
+          status: "generating",
+        })
+        .returning();
+
+      const voiceId = voiceMap.get(character.name)!;
+      const { filePath, durationMs } = await generateSegmentAudio({
+        voiceId,
+        text: seg.text,
+        segmentId: row!.id,
+        podcastId,
+      });
+
+      await db
+        .update(podcastSegments)
         .set({ audioFilePath: filePath, durationMs, status: "completed" })
-        .where(eq(podcastSegments.id, row!.id))
-      
-      segmentPaths.push(filePath)
-      const progress = 30 + Math.round((i / script.segments.length) * 60)
-      await updateStatus(podcastId, "generating_audio", progress)
+        .where(eq(podcastSegments.id, row!.id));
+
+      segmentPaths.push(filePath);
+      const progress = 30 + Math.round((i / script.segments.length) * 60);
+      await updateStatus(podcastId, "generating_audio", progress);
     }
-    
+
     // Step 4: Combine audio with ffmpeg
-    await updateStatus(podcastId, "combining", 92)
-    const { outputPath, durationSeconds } = await combineAudio({ 
-      segmentPaths, 
-      podcastId, 
-      title: podcast.title 
-    })
-    
+    if (segmentPaths.length === 0) {
+      throw new Error("No audio segments were generated. Check character names and voice configuration.");
+    }
+    await updateStatus(podcastId, "combining", 92);
+    const { outputPath, durationSeconds } = await combineAudio({
+      segmentPaths,
+      podcastId,
+      title: podcast.title,
+    });
+
     // Done
-    await db.update(podcasts)
-      .set({ 
-        status: "completed", 
-        progress: 100, 
-        outputFilePath: outputPath, 
-        durationSeconds 
+    await db
+      .update(podcasts)
+      .set({
+        status: "completed",
+        progress: 100,
+        outputFilePath: outputPath,
+        durationSeconds,
       })
-      .where(eq(podcasts.id, podcastId))
-      
+      .where(eq(podcasts.id, podcastId));
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error"
-    await db.update(podcasts)
-      .set({ 
-        status: "failed", 
-        errorMessage 
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    await db
+      .update(podcasts)
+      .set({
+        status: "failed",
+        errorMessage,
       })
-      .where(eq(podcasts.id, podcastId))
-    throw error
+      .where(eq(podcasts.id, podcastId));
+    throw error;
   }
 }
 
-async function updateStatus(podcastId: number, status: string, progress: number) {
-  await db.update(podcasts)
+async function updateStatus(
+  podcastId: number,
+  status: string,
+  progress: number,
+) {
+  await db
+    .update(podcasts)
     .set({ status, progress })
-    .where(eq(podcasts.id, podcastId))
+    .where(eq(podcasts.id, podcastId));
 }

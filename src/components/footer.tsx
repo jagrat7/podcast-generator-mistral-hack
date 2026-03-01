@@ -1,7 +1,8 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { ArrowRight, Mic2 } from "lucide-react"
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+import { ScienceLogoIcon } from "./logo";
 
 const PixelMistralArt = () => (
   <svg
@@ -34,58 +35,33 @@ const PixelMistralArt = () => (
     <rect x="0" y="40" width="45" height="10" fill="#DC0000" />
     <rect x="55" y="40" width="45" height="10" fill="#DC0000" />
   </svg>
-)
+);
 
 const PodcasterLogo = () => (
   <div className="flex items-center gap-2">
-    <div className="mistral-gradient flex h-7 w-7 items-center justify-center">
-      <Mic2 className="h-3.5 w-3.5 text-white" />
+    <div className="text-foreground flex h-7 w-7 items-center justify-center">
+      <ScienceLogoIcon className="h-5 w-5" />
     </div>
-    <span className="text-sm font-bold text-foreground">
+    <span className="text-foreground text-sm font-bold">
       Podcaster<span className="mistral-gradient-text">.ai</span>
     </span>
   </div>
-)
+);
 
 export function Footer() {
   return (
-    <section className="pt-20 bg-background">
-      <div className="max-w-4xl mx-auto px-6 text-center">
-        <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-12">
-          The next chapter of AI is yours.
-        </h2>
-
-        <div className="flex flex-wrap justify-center gap-6 mb-16">
-          <Link
-            href="/podcasts/new"
-            className="group inline-flex items-center text-foreground border-b border-border hover:border-primary pb-1 transition-colors"
-          >
-            Start generating podcasts
-            <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </Link>
-          <Link
-            href="/characters"
-            className="group inline-flex items-center text-foreground border-b border-border hover:border-primary pb-1 transition-colors"
-          >
-            Create voice profiles
-            <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </Link>
-        </div>
-
-        <PixelMistralArt />
-      </div>
-
+    <section className="bg-background">
       {/* Gradient stripes */}
-      <div className="h-24 footer-gradient" />
+      <div className="footer-gradient h-24" />
 
       {/* Simple bottom bar */}
       <footer className="bg-mistral-gold py-6">
-        <div className="max-w-7xl mx-auto px-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6">
           <Link href="/">
             <PodcasterLogo />
           </Link>
 
-          <p className="text-sm text-foreground/70">Podcaster.ai &copy; 2026</p>
+          <p className="text-foreground/70 text-sm">Podcaster.ai &copy; 2026</p>
 
           <div className="flex items-center gap-4">
             <a
@@ -110,5 +86,5 @@ export function Footer() {
         </div>
       </footer>
     </section>
-  )
+  );
 }

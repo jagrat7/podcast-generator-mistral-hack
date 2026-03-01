@@ -1,39 +1,40 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { useTheme } from "next-themes"
-import { useEffect, useState } from "react"
-import { cn } from "~/lib/utils"
-import { Mic2, BookOpen, Home, Plus, Sun, Moon } from "lucide-react"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
+import { cn } from "~/lib/utils";
+import { BookOpen, Home, Plus, Sun, Moon, Mic2 } from "lucide-react";
+import { ScienceLogoIcon } from "./logo";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: Home },
-  { href: "/characters", label: "Registry", icon: Mic2 },
-  { href: "/podcasts", label: "Archive", icon: BookOpen },
-]
+  { href: "/characters", label: "Characters", icon: Mic2 },
+  { href: "/podcasts", label: "Library", icon: BookOpen },
+];
 
 export function Nav() {
-  const pathname = usePathname()
-  const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
+  const pathname = usePathname();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => setMounted(true), [])
+  useEffect(() => setMounted(true), []);
 
   return (
-    <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border">
-      <div className="mx-auto max-w-6xl px-6 relative z-10">
+    <header className="bg-background/90 border-border sticky top-0 z-50 border-b backdrop-blur-xl">
+      <div className="relative z-10 mx-auto max-w-6xl px-6">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-12">
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="mistral-gradient flex h-8 w-8 items-center justify-center transition-transform group-hover:scale-105">
-                <Mic2 className="h-4 w-4 text-white" />
+            <Link href="/" className="group flex items-center gap-3">
+              <div className="text-foreground flex h-8 w-8 items-center justify-center transition-transform group-hover:scale-105">
+                <ScienceLogoIcon className="h-6 w-6" />
               </div>
               <span className="text-lg font-bold tracking-tight text-foreground">
                 Podcaster<span className="mistral-gradient-text">.ai</span>
               </span>
             </Link>
-            
+
             <nav className="hidden md:flex items-center gap-1">
               {navItems.map((item) => {
                 const Icon = item.icon
@@ -57,12 +58,12 @@ export function Nav() {
               })}
             </nav>
           </div>
-          
+
           <div className="flex items-center gap-3">
             {mounted && (
               <button
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="flex h-9 w-9 items-center justify-center border border-border bg-card text-muted-foreground transition-colors hover:text-foreground hover:bg-primary/5"
+                className="border-border bg-card text-muted-foreground hover:text-foreground hover:bg-primary/5 flex h-9 w-9 items-center justify-center border transition-colors"
                 aria-label="Toggle theme"
               >
                 {theme === "dark" ? (
@@ -73,7 +74,7 @@ export function Nav() {
               </button>
             )}
 
-            <Link 
+            <Link
               href="/podcasts/new"
               className="hidden sm:inline-flex h-9 items-center justify-center bg-card border border-border px-4 text-xs font-bold uppercase tracking-wider text-foreground shadow-[2px_2px_0px_0px_var(--color-mistral-orange)] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_var(--color-mistral-orange)]"
             >
@@ -84,5 +85,5 @@ export function Nav() {
         </div>
       </div>
     </header>
-  )
+  );
 }
