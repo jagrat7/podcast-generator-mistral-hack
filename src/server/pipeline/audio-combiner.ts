@@ -32,7 +32,7 @@ export async function combineAudio(
   await fs.writeFile(concatListPath, concatContent);
 
   // Combine audio with ffmpeg
-  const ffmpegCommand = `ffmpeg -f concat -safe 0 -i "${concatListPath}" -af "loudnorm,afade=t=in:d=0.5,afade=t=out:st=0:d=0.5" -c:a libmp3lame -b:a 128k "${outputPath}"`;
+  const ffmpegCommand = `ffmpeg -f concat -safe 0 -i "${concatListPath}" -af "loudnorm" -c:a libmp3lame -b:a 128k "${outputPath}"`;
 
   await execAsync(ffmpegCommand);
 

@@ -195,7 +195,7 @@ export default function PodcastDetailPage() {
         <div className="mb-8 border-2 border-border bg-card p-6">
           <audio
             ref={audioRef}
-            src={`/api/audio/${podcast.outputFilePath.replace("storage/output/", "")}`}
+            src={`/api/audio/output/${podcast.outputFilePath.split("/").pop()}`}
             onTimeUpdate={handleTimeUpdate}
             onLoadedMetadata={handleLoadedMetadata}
             onEnded={() => setIsPlaying(false)}

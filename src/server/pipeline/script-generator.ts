@@ -40,6 +40,11 @@ export async function generateScript(
 ): Promise<PodcastScript> {
   const { documentText, characters, format, title } = input
 
+  console.log(`[script-generator] Input text length: ${documentText.length} chars`)
+  console.log(`[script-generator] Input text preview: "${documentText.slice(0, 300)}..."`)
+  console.log(`[script-generator] Characters:`, characters.map(c => c.name))
+  console.log(`[script-generator] Format: ${format}, Title: ${title}`)
+
   const truncatedText = documentText.slice(0, 30000)
 
   // Build speaker ID mapping: SP1 → character[0], SP2 → character[1], etc.
@@ -94,10 +99,14 @@ ${truncatedText}
 
 Generate a structured script with natural dialogue that brings the content to life through these speakers.`
 
+  console.log(`[script-generator] Truncated text length: ${truncatedText.length} chars`)
+  console.log(`[script-generator] Truncated text preview: "${truncatedText.slice(0, 500)}..."`)
+  console.log(`[script-generator] Full user prompt length: ${userPrompt.length} chars`)
+
   // Map speaker IDs back to real character names
   /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
   const llmResult: LlmScript = (await generateObject({
-    model: mistral("mistral-large-latest"),
+    model: mistral("mistral-large-2512"),
     schema: llmScriptSchema,
     system: systemPrompt,
     prompt: userPrompt,

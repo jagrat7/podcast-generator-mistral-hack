@@ -21,6 +21,7 @@ function matchAllWords(dbName: string, speakerName: string): boolean {
 }
 
 export async function podcastWorkflow(podcastId: number) {
+  console.log(`[workflow] Starting podcast ${podcastId}`)
   try {
     // Load podcast + characters from DB
     const podcast = await db.query.podcasts.findFirst({
@@ -31,15 +32,20 @@ export async function podcastWorkflow(podcastId: number) {
       throw new Error(`Podcast ${podcastId} not found`);
     }
 
+    console.log(`[workflow] Podcast "${podcast.title}" - bookId: ${podcast.bookId}, chapter: ${podcast.chapterIndex}`)
+
     const pcRows = await db.query.podcastCharacters.findMany({
       where: eq(podcastCharacters.podcastId, podcastId),
     });
+
+    console.log(`[workflow] Found ${pcRows.length} podcast-character associations`)
 
     const charRows = await Promise.all(
       pcRows.map(async (pc) => {
         const char = await db.query.characters.findFirst({
           where: eq(characters.id, pc.characterId),
         });
+        console.log(`[workflow] Character ${pc.characterId}: "${char?.name}" - hasVoiceId: ${!!char?.elevenLabsVoiceId}, hasSamples: ${!!char?.audioSamplesJson}`)
         return {
           id: char!.id,
           name: char!.name,
@@ -69,8 +75,11 @@ export async function podcastWorkflow(podcastId: number) {
     }
 
     const documentText = chapter.text;
+    console.log(`[workflow] Chapter text length: ${documentText.length} chars`)
+    console.log(`[workflow] Chapter text preview: "${documentText.slice(0, 200)}..."`)
 
     // Step 1: Generate script with Mistral
+    console.log(`[workflow] Step 1: Generating script with Mistral...`)
     await updateStatus(podcastId, "scripting", 15);
     const script = await generateScript({
       documentText,
@@ -78,18 +87,24 @@ export async function podcastWorkflow(podcastId: number) {
       format: podcast.format as any,
       title: podcast.title,
     });
+    console.log(`[workflow] Script generated: ${script.segments.length} segments`)
+    console.log(`[workflow] Speakers in script:`, [...new Set(script.segments.map(s => s.speakerName))])
     await db
       .update(podcasts)
       .set({ scriptJson: JSON.stringify(script) })
       .where(eq(podcasts.id, podcastId));
 
     // Step 2: Clone voices for each character
+    console.log(`[workflow] Step 2: Cloning voices for ${charRows.length} characters...`)
     await updateStatus(podcastId, "generating_voices", 25);
     const voiceMap = new Map<string, string>();
     for (const c of charRows) {
+      console.log(`[workflow] Ensuring voice for character ${c.id} (${c.name})...`)
       const voiceId = await ensureVoiceForCharacter(c.id);
+      console.log(`[workflow] Got voiceId: ${voiceId} for ${c.name}`)
       voiceMap.set(c.name, voiceId);
     }
+    console.log(`[workflow] Voice map complete:`, Object.fromEntries(voiceMap))
 
     // Build a lookup map: lowercase name -> character row
     const charLookup = new Map<string, (typeof charRows)[0]>();
@@ -130,19 +145,41 @@ export async function podcastWorkflow(podcastId: number) {
         .returning();
 
       const voiceId = voiceMap.get(character.name)!;
-      const { filePath, durationMs } = await generateSegmentAudio({
-        voiceId,
-        text: seg.text,
-        segmentId: row!.id,
-        podcastId,
-      });
+      
+      try {
+        const { filePath, durationMs, newVoiceId } = await generateSegmentAudio({
+          voiceId,
+          text: seg.text,
+          segmentId: row!.id,
+          podcastId,
+          characterId: character.id,
+        });
 
-      await db
-        .update(podcastSegments)
-        .set({ audioFilePath: filePath, durationMs, status: "completed" })
-        .where(eq(podcastSegments.id, row!.id));
+        // If TTS had to use a fallback voice, update the cache
+        if (newVoiceId) {
+          console.log(`[workflow] Updating cached voice for ${character.name} from ${voiceId} to ${newVoiceId}`)
+          await db
+            .update(characters)
+            .set({ elevenLabsVoiceId: newVoiceId })
+            .where(eq(characters.id, character.id))
+          voiceMap.set(character.name, newVoiceId)
+        }
 
-      segmentPaths.push(filePath);
+        await db
+          .update(podcastSegments)
+          .set({ audioFilePath: filePath, durationMs, status: "completed" })
+          .where(eq(podcastSegments.id, row!.id));
+
+        segmentPaths.push(filePath);
+        console.log(`[workflow] Segment ${i + 1}/${script.segments.length} completed: ${filePath}`)
+      } catch (segmentError) {
+        console.error(`[workflow] Failed to generate audio for segment ${i}:`, segmentError)
+        // Mark segment as failed but continue with others
+        await db
+          .update(podcastSegments)
+          .set({ status: "failed" })
+          .where(eq(podcastSegments.id, row!.id))
+      }
       const progress = 30 + Math.round((i / script.segments.length) * 60);
       await updateStatus(podcastId, "generating_audio", progress);
     }
