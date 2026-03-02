@@ -11,7 +11,6 @@ I got accepted to the hackathon pretty late, so I didn't have enough time to mak
 ## Features
 
 - **Voice Registry** - Create and manage character voice profiles with custom personalities and speaking styles
-- **Advanced Emotion Handling** - Properly processes emotional cues like [laughing], [sighing], [excited] and converts them to actual sounds
 - **Multi-Character Dialogue** - AI-generated conversations between multiple voices with distinct personalities
 - **Robust Script Parsing** - Intelligent parsing of epub chapters to extract dialogue structure and emotional content
 - **High-Quality Audio Synthesis** - Professional voice output via ElevenLabs with emotion-aware voice modulation
