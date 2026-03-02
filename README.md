@@ -1,6 +1,6 @@
 # Podcaster.ai
 
-This is a kinda done implementation app that takes a book (epub) and transforms it into dynamic multi-character podcasts, you can pick the chapter(s) you want to generate the podcast for. You can create and personalize your own character voices with unique personalities and speaking styles. It was for a Mistral AI hackthon so th ui is inspired by that. 
+This is a kinda done implementation app that takes a book (epub) and transforms it into dynamic multi-character podcasts, you can pick the chapter(s) you want to generate the podcast for. You can create and personalize your own character voices with unique personalities and speaking styles. It was for a Mistral AI hackathon so th ui is inspired by that. 
 
 I got accepted to the hackathon pretty late, so I didn't have enough time to make something properly polished. I didn't end up submitting it, so now it just lives here in its current graveyard state.
 
@@ -21,7 +21,7 @@ I got accepted to the hackathon pretty late, so I didn't have enough time to mak
 ## Stuff still to implement 
 
 - Better injestion for books, perhaps a rag pipeline
-- Remove consfusing abstractions from the UI and make it more intuitive
+- Remove confusing abstractions from the UI and make it more intuitive
 - Remove stuff that was generated in an attempt to copy Mistral AI's UI and doesnt make sense for the app
 
 ## Tech Stack
