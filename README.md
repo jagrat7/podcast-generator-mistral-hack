@@ -4,7 +4,7 @@ This is a kinda done implementation app that takes a book (epub) and transforms 
 
 I got accepted to the hackathon pretty late, so I didn't have enough time to make something properly polished. I didn't end up submitting it, so now it just lives here in its current graveyard state.
 
-![Podcaster.ai Demo](./docs/Kooha-2026-03-01-19-23-08.mp4)
+[![Podcaster.ai Demo](https://img.youtube.com/vi/bDo1gHLTi14/maxresdefault.jpg)](https://youtu.be/bDo1gHLTi14)
 
 ## Features
 
