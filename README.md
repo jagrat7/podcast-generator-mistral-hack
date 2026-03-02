@@ -1,23 +1,36 @@
 # Podcaster.ai
 
-Transform epub documents into dynamic multi-character podcasts powered by Mistral AI and ElevenLabs.
+This is a kinda done implementation app that takes a book (epub) and transforms it into dynamic multi-character podcasts, you can pick the chapter(s) you want to generate the podcast for. You can create and personalize your own character voices with unique personalities and speaking styles. It was for a Mistral AI hackthon so th ui is inspired by that. 
+
+I got accepted to the hackathon pretty late, so I didn't have enough time to make something properly polished. I didn't end up submitting it, so now it just lives here in its current graveyard state.
+
+![Podcaster.ai Demo](./docs/Kooha-2026-03-01-19-23-08.mp4)
 
 ## Features
 
-- **Voice Registry** - Create and manage character voice profiles
-- **Podcast Generation** - Convert epub books into engaging podcast conversations
-- **Multi-Character Dialogue** - AI-generated conversations between multiple voices
-- **Audio Synthesis** - High-quality voice output via ElevenLabs
+- **Voice Registry** - Create and manage character voice profiles with custom personalities and speaking styles
+- **Advanced Emotion Handling** - Properly processes emotional cues like [laughing], [sighing], [excited] and converts them to actual sounds
+- **Multi-Character Dialogue** - AI-generated conversations between multiple voices with distinct personalities
+- **Robust Script Parsing** - Intelligent parsing of epub chapters to extract dialogue structure and emotional content
+- **High-Quality Audio Synthesis** - Professional voice output via ElevenLabs with emotion-aware voice modulation
+- **Multiple Podcast Formats** - Support for interview, debate, storytelling, educational, comedy, and roundtable formats
+- **Progressive Generation** - Real-time progress tracking with detailed status updates
+
+## Stuff still to implement 
+
+- Better injestion for books, perhaps a rag pipeline
+- Remove consfusing abstractions from the UI and make it more intuitive
+- Remove stuff that was generated in an attempt to copy Mistral AI's UI and doesnt make sense for the app
 
 ## Tech Stack
 
 - **Framework**: Next.js 15 (App Router)
 - **Styling**: TailwindCSS 4 + shadcn/ui
-- **AI**: Mistral AI (via AI SDK)
-- **Voice**: ElevenLabs API
-- **Database**: SQLite (libsql) + Drizzle ORM
-- **API**: tRPC for type-safe endpoints
-- **Forms**: React Hook Form + Zod validation
+- **AI**: Mistral AI (via AI SDK) - Advanced LLM for script generation
+- **Voice**: ElevenLabs API - High-quality text-to-speech with emotion support
+- **Database**: SQLite (libsql) + Drizzle ORM - Lightweight embedded database
+- **Workflow**: Vercel Workflow (WDK) - Durable podcast generation pipeline
+- **File Processing**: EPUB parsing with dialogue and emotion extraction
 
 ## Getting Started
 
@@ -68,33 +81,9 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) to view the app.
 
-## Project Structure
 
-```
-src/
-├── app/                    # Next.js App Router pages
-│   ├── page.tsx           # Dashboard
-│   ├── characters/        # Voice Registry
-│   └── podcasts/          # Podcast Archive
-├── components/            # React components
-│   ├── nav.tsx           # Navigation
-│   ├── footer.tsx        # Footer
-│   └── ui/               # shadcn/ui components
-├── server/               # Backend
-│   └── api/              # tRPC routers
-└── styles/               # Global CSS
-```
+## Enhanced Features
 
-## Scripts
-
-| Command | Description |
-|---------|-------------|
-| `bun dev` | Start development server |
-| `bun build` | Build for production |
-| `bun start` | Start production server |
-| `bun lint` | Run ESLint |
-| `bun typecheck` | Run TypeScript check |
-| `bun db:studio` | Open Drizzle Studio |
 
 ## License
 
